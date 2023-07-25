@@ -1,0 +1,72 @@
+#### Enable Apache Proxy related modules
+
+sudo a2enmod proxy
+sudo a2enmod proxy_http
+sudo a2enmod proxy_ajp
+sudo a2enmod rewrite
+sudo a2enmod deflate
+sudo a2enmod headers
+sudo a2enmod proxy_balancer
+sudo a2enmod proxy_connect
+sudo a2enmod proxy_html
+
+
+# Apache Conf
+<VirtualHost *:80>
+	# The ServerName directive sets the request scheme, hostname and port that
+	# the server uses to identify itself. This is used when creating
+	# redirection URLs. In the context of virtual hosts, the ServerName
+	# specifies what hostname must appear in the request's Host: header to
+	# match this virtual host. For the default virtual host (this file) this
+	# value is not decisive as it is used as a last resort host regardless.
+	# However, you must set it for any further virtual host explicitly.
+	ProxyPreserveHost On
+
+        ProxyPass / http://127.0.0.1:8000/
+        ProxyPassReverse / http://127.0.0.1:8000/
+
+        ServerName app.rehanmanzoor.com
+
+	ServerAdmin webmaster@localhost
+	DocumentRoot /var/www/app/public
+
+	# Available loglevels: trace8, ..., trace1, debug, info, notice, warn,
+	# error, crit, alert, emerg.
+	# It is also possible to configure the loglevel for particular
+	# modules, e.g.
+	#LogLevel info ssl:warn
+
+	ErrorLog ${APACHE_LOG_DIR}/app.rehanmanzoor.com.error.log
+	CustomLog ${APACHE_LOG_DIR}/app.rehanmanzoor.com.access.log combined
+
+	# For most configuration files from conf-available/, which are
+	# enabled or disabled at a global level, it is possible to
+	# include a line for only one particular virtual host. For example the
+	# following line enables the CGI configuration for this host only
+	# after it has been globally disabled with "a2disconf".
+	#Include conf-available/serve-cgi-bin.conf
+        <Directory /var/www/app/public>
+            Options Indexes FollowSymLinks MultiViews
+            AllowOverride All
+            Require all granted
+       </Directory>
+</VirtualHost>
+
+
+# Supervisor Config
+[program:octane_app]
+process_name=%(program_name)s
+command=php /var/www/app/artisan octane:start --server=swoole --max-requests=1000
+autostart=true
+autorestart=true
+user=ubuntu
+redirect_stderr=true
+stdout_logfile=/tmp/octane_app.log
+stopwaitsecs=3600
+
+# Restart Supervisor
+sudo supervisorctl reread
+
+sudo supervisorctl update
+
+sudo supervisorctl start octane_app
